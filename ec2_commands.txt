@@ -1,0 +1,195 @@
+    1  mkdir -p /root/.config/composer
+    2  echo '{
+         "http-basic": {
+             "repo.magento.com": {
+                 "username": "e6662d0a8aa8412026493109d81cb61d",
+                 "password": "8eb3fcfb4200d7b713efb86d2944ceeb"
+             }
+         }
+   }' >  /root/.config/composer/auth.json
+    3  groupadd clp
+    4  useradd --create-home -g clp test-ssh
+    5  sudo apt-get install vim curl git -y
+    6  sudo apt-get install software-properties-common -y
+    7  sudo add-apt-repository ppa:ondrej/php -y
+    8  sudo add-apt-repository ppa:chris-lea/redis-server -y
+    9  curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+   10  sudo apt-get install apt-transport-https -y
+   11  echo "deb https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-7.x.list
+   12  sudo apt-get update
+   13  sudo apt install elasticsearch nginx mysql-server mysql-client varnish redis-server rabbitmq-server -y
+   14  sudo apt install -y php7.4-fpm php7.4-common php7.4-mysql php7.4-gmp php7.4-curl php7.4-intl php7.4-mbstring php7.4-xmlrpc php7.4-gd php7.4-xml php7.4-cli php7.4-zip php7.4-soap php7.4-bcmath
+   15  systemctl stop nginx.service
+   16  systemctl stop php7.4-fpm.service
+   17  vim /etc/php/7.4/fpm/pool.d/www.conf
+   18  vim /etc/nginx/nginx.conf
+   19  systemctl start php7.4-fpm.service
+   20  systemctl start nginx.service
+   21  systemctl restart elasticsearch.service
+   22  systemctl restart redis-server.service
+   23  systemctl restart rabbitmq-server.service
+   24  systemctl restart mysql.service
+   25  mysql -u root 
+create database magento;
+create user 'magento'@'localhost' IDENTIFIED BY 'magento';
+GRANT ALL ON magento.* TO 'magento'@'localhost';
+flush privileges;
+
+   26  cd /var/www/html
+   27  curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+   28  composer self-update 1.9.3
+   29  ls /root/.config/composer/auth.json
+   30  time composer create-project --repository=https://repo.magento.com/ magento/project-community-edition magento2
+   31  chown -R test-ssh:clp /var/www/html/magento2
+   32  chown -R test-ssh:clp /var/www/html/magento2/
+   33  find var generated vendor pub/static pub/media app/etc -type f -exec chmod g+w {} +
+   34  find var generated vendor pub/static pub/media app/etc -type f -exec chmod g+ws {} +
+   35  chmod a+x bin/magento
+   36  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+   37  vim /etc/hosts
+
+cat /etc/hosts
+127.0.0.1 localhost test.mgt.com
+
+   38  ip a
+   39  openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+   40  systemctl enable elasticsearch.service
+   41  mysql -umagento -pmagento magento
+   42  systemctl restart php7.4-fpm.service
+   43  systemctl restart nginx.service
+   44  rm /etc/nginx/sites-available/default
+   45  rm /etc/nginx/sites-enabled/default
+   46  vim /etc/nginx/sites-enabled/magento.conf
+   47  vim /etc/nginx/sites-available/magento.conf
+   48  ps -aef | grep var
+   49  vim /etc/nginx/snippets/ssl-params.conf
+   50  ln -s /etc/nginx/sites-available/magento.conf /etc/nginx/sites-enabled
+   51  vim /etc/nginx/nginx.conf
+head /etc/nginx/nginx.conf
+user test-ssh clp;
+worker_processes auto;
+pid /run/nginx.pid;
+
+
+52  ls -lrt /etc/nginx/sites-enabled/*
+   53  cd /var/www/html/magento2
+   54  systemctl restart php7.4-fpm.service
+   55  systemctl restart nginx.service
+   56  vim /etc/varnish/default.vcl
+   57  cd /var/www/html/magento2
+   58  systemctl restart varnish.service
+   59  systemctl restart nginx.service
+   60  netstat -plant
+   61  apt install net-tools -y
+   62  netstat -plant
+   63  bin/magento setup:install --base-url=https://test.mgt.com --db-host=localhost --db-name=magento --db-user=magento --db-password=magento --backend-frontname=admin --admin-firstname=admin --admin-lastname=admin --admin-email=admin@admin.com --admin-user=admin --admin-password=admin123 --language=en_US --currency=USD --timezone='America/Chicago' --use-rewrites=1 --search-engine=elasticsearch7 --elasticsearch-host=localhost --elasticsearch-port=9200
+   64  php bin/magento cache:flush
+   65  php bin/magento cache:clean
+   66  curl -k -L -i https://test.mgt.com/health_check.php
+   67  vim /etc/varnish/default.vcl
+   68  curl -k -L -i http://test.mgt.com:8080/health_check.php
+   69  vim /etc/nginx/sites-available/magento.conf
+   70  systemctl restart nginx.service
+   71  systemctl restart varnish.service
+   72  php bin/magento cache:clean
+   73  curl -k -L -i http://test.mgt.com:8080/health_check.php
+   74  curl -k -L -i http://test.mgt.com:80/health_check.php
+   75  less /var/log/nginx/error.log
+   76  sudo chmod -R 777 var pub app generated
+   77  systemctl restart php7.4-fpm.service
+   78  systemctl restart nginx.service
+   79  systemctl restart varnish.service
+   80  php bin/magento cache:flush
+   81  php bin/magento cache:clean
+   82  less /var/log/nginx/error.log
+   83  curl -k -L -i http://test.mgt.com:80/health_check.php
+   84  curl -k -L -i https://test.mgt.com/health_check.php
+   85  php bin/magento module:disable Magento_TwoFactorAuth
+   86  bin/magento setup:config:set --amqp-host="localhost" --amqp-port="5672"  --amqp-user="guest" --amqp-password="guest"  --amqp-virtualhost='/'
+   87  bin/magento setup:config:set --cache-backend=redis --cache-backend-redis-server=127.0.0.1 --cache-backend-redis-db=0
+   88  bin/magento setup:config:set --page-cache=redis --page-cache-redis-server=127.0.0.1 --page-cache-redis-db=1
+   89  bin/magento setup:config:set --session-save=redis --session-save-redis-host=127.0.0.1 --session-save-redis-log-level=4 --session-save-redis-db=2
+   90  mkdir -p /var/www/html/magento2/var/composer_home
+   91  echo '{
+    "http-basic": {
+        "repo.magento.com": {
+            "username": "e6662d0a8aa8412026493109d81cb61d",
+            "password": "8eb3fcfb4200d7b713efb86d2944ceeb"
+        }
+    }
+}' > /var/www/html/magento2/var/composer_home/auth.json
+   92  php bin/magento sampledata:deploy  #t2.medium dies with oom, my local ubuntu machine is able to load fine.
+   93  less /var/log/syslog #oom killer
+   94  netstat -plant 
+   95  systemctl restart elasticsearch.service
+   96  systemctl restart redis-server.service
+   97  systemctl restart rabbitmq-server.service
+   98  systemctl restart mysql.service
+   99  systemctl restart php7.4-fpm.service
+  100  systemctl restart nginx.service
+  101  systemctl restart varnish.service
+  102  curl -k -L -i https://test.mgt.com/health_check.php
+  103  curl -k -L -i http://test.mgt.com:80/health_check.php
+  104  php bin/magento cache:flush
+  105  sudo chmod -R 777 var pub app generated
+  106  sudo php bin/magento indexer:reindex
+  107  sudo php bin/magento setup:upgrade
+  108  sudo php bin/magento setup:di:compile
+  109  sudo php bin/magento setup:static-content:deploy -f
+  110  sudo php bin/magento indexer:reindex
+  111  sudo php bin/magento cache:flush
+  112  sudo php bin/magento cache:clean
+  113  sudo chmod -R 777 var pub app generated
+  114  apt install phpmyadmin
+  115  mysql -uroot
+  116  mysql -uphpmyadmin -pphpmyadmin
+  117  mysql -uroot
+  118  vim /etc/nginx/snippets/phpmyadmin.conf
+  119  cp /etc/nginx/sites-available/magento.conf /etc/nginx/sites-available/phpmyadmin.conf
+  120  vim /etc/nginx/sites-available/phpmyadmin.conf
+  121  ln -s /usr/share/phpmyadmin /var/www/html/phpmyadmin
+  122  cd /var/www/html/phpmyadmin
+  123  ls -lrt
+  124  chown -R test-ssh:clp .
+  125  vim /etc/nginx/sites-available/phpmyadmin.conf
+  126  vim /etc/nginx/sites-available/magento.conf
+  127  vim /etc/nginx/sites-available/phpmyadmin.conf
+  128  nginx -t
+  129  vim /etc/nginx/sites-available/phpmyadmin.conf
+  130  nginx -t
+  131  systemctl restart nginx.service
+  132  systemctl status nginx.service
+  133  netstat -plant
+  134  netstat -plant | grep ngin
+  135  vim /etc/nginx/sites-available/phpmyadmin.conf
+  136  ln -s /etc/nginx/sites-available/phpmyadmin.conf /etc/nginx/sites-enabled/
+  137  systemctl restart nginx.service
+  138  netstat -plant | grep ngin
+  139  curl localhost:8081
+  140  curl localhost:8081/
+  141  curl localhost:8081/phpmyadmin
+  142  ls -lrt
+  143  vim /etc/nginx/sites-available/phpmyadmin.conf
+  144  systemctl restart php7.4-fpm.service
+  145  systemctl restart nginx.service
+  146  netstat -plant | grep ngin
+  147  less /var/log/syslog
+  148  less /var/log/nginx/error.log
+  149  curl localhost:8081/
+  150  curl localhost:8081
+  151  vim /etc/nginx/sites-available/phpmyadmin.conf
+  152  cd ..
+  153  ls -lrt
+  154  cd -
+  155  vim /etc/nginx/sites-available/phpmyadmin.conf
+  156  nginx -t
+  157  systemctl restart nginx.service
+  158  netstat -plant | grep ngin
+  159  curl localhost:8081
+  160  curl -v test.mgt.com:8081
+  161  vim /etc/nginx/sites-enabled/phpmyadmin.conf
+  162  systemctl restart php7.4-fpm.service
+  163  systemctl restart nginx.service
+  164  netstat -plant | grep ngin
+  165  curl -v test.mgt.com:8081
+  166  cat /etc/nginx/sites-available/phpmyadmin.conf
