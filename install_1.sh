@@ -1,7 +1,18 @@
   mkdir -p /root/.config/composer
-  vim /etc/passwd
+  echo '{
+         "http-basic": {
+             "repo.magento.com": {
+                 "username": "e6662d0a8aa8412026493109d81cb61d",
+                 "password": "8eb3fcfb4200d7b713efb86d2944ceeb"
+             }
+         }
+   }' >  /root/.config/composer/auth.json
+  
+  groupadd clp
+  useradd --create-home -g clp test-ssh
   sudo apt-get install vim curl git -y
-  vim /etc/passwd
+  #update /etc/php/7.4/fpm/pool.d/www.conf and /etc/nginx/nginx.conf to use test-ssh and clp
+  
   sudo apt-get install software-properties-common -y
   sudo add-apt-repository ppa:ondrej/php -y
   sudo add-apt-repository ppa:chris-lea/redis-server -y
